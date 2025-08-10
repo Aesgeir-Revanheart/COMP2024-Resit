@@ -10,8 +10,14 @@ import javafx.scene.Scene;
 import javafx.scene.image.*;
 import javafx.scene.input.*;
 import javafx.util.Duration;
+import javafx.geometry.Bounds;
+import com.example.demo.utilities.CollisionUtils;
 
 public abstract class LevelParent extends Observable {
+
+	private static final double PLAYER_SHRINK     = 0.40; // more forgiving for the player
+	private static final double ENEMY_SHRINK      = 0.30; // fair for enemies
+	private static final double PROJECTILE_SHRINK = 0.15; // tiny trim for bullets
 
 	private static final double SCREEN_HEIGHT_ADJUSTMENT = 150;
 	private static final int MILLISECOND_DELAY = 50;
@@ -29,7 +35,7 @@ public abstract class LevelParent extends Observable {
 	private final List<ActiveActorDestructible> enemyUnits;
 	private final List<ActiveActorDestructible> userProjectiles;
 	private final List<ActiveActorDestructible> enemyProjectiles;
-	
+
 	private int currentNumberOfEnemies;
 	private LevelView levelView;
 
@@ -175,16 +181,28 @@ public abstract class LevelParent extends Observable {
 	}
 
 	private void handleCollisions(List<ActiveActorDestructible> actors1,
-			List<ActiveActorDestructible> actors2) {
+								  List<ActiveActorDestructible> actors2) {
 		for (ActiveActorDestructible actor : actors2) {
-			for (ActiveActorDestructible otherActor : actors1) {
-				if (actor.getBoundsInParent().intersects(otherActor.getBoundsInParent())) {
+			final Bounds a = actor.getBoundsInParent();
+			final double sa = shrinkFor(actor);
+
+			for (ActiveActorDestructible other : actors1) {
+				final Bounds b = other.getBoundsInParent();
+				final double sb = shrinkFor(other);
+
+				if (CollisionUtils.intersects(a, sa, b, sb)) {
 					actor.takeDamage();
-					otherActor.takeDamage();
+					other.takeDamage();
 				}
 			}
 		}
 	}
+	private double shrinkFor(ActiveActorDestructible actor) {
+		if (actor instanceof Projectile) return PROJECTILE_SHRINK;
+		if (actor == user)               return PLAYER_SHRINK;
+		return ENEMY_SHRINK;
+	}
+
 
 	private void handleEnemyPenetration() {
 		for (ActiveActorDestructible enemy : enemyUnits) {
