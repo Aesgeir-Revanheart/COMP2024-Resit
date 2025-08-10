@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.demo.view.MainMenu;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import org.junit.jupiter.api.Test;

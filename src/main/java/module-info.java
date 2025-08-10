@@ -1,13 +1,11 @@
 module com.example.demo {
     requires javafx.controls;
+    requires javafx.graphics;
     requires javafx.fxml;
 
-    // Add these for JUnit and TestFX
-   // requires org.junit.jupiter.api;
-   // requires org.testfx.junit5;
-
-    opens com.example.demo to javafx.fxml;
     exports com.example.demo.controller;
-    opens level to javafx.fxml;
-    opens com.example.demo.level to javafx.fxml;
+    exports com.example.demo.level;
+    exports com.example.demo.model;
+    exports com.example.demo.view;
+
 }
