@@ -1,5 +1,6 @@
-package com.example.demo;
+package com.example.demo.level;
 
+import com.example.demo.Boss;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.util.Duration;

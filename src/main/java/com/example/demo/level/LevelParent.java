@@ -1,8 +1,9 @@
-package com.example.demo;
+package com.example.demo.level;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+import com.example.demo.*;
 import javafx.animation.*;
 import javafx.event.EventHandler;
 import javafx.scene.Group;

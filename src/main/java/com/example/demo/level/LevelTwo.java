@@ -1,10 +1,13 @@
-package com.example.demo;
+package com.example.demo.level;
+
+import com.example.demo.ActiveActorDestructible;
+import com.example.demo.EnemyPlane;
 
 public class LevelTwo extends LevelParent {
 
     // Constants for LevelTwo
     private static final String BACKGROUND_IMAGE_NAME = "/com/example/demo/images/background2.jpg";
-    private static final String NEXT_LEVEL = "com.example.demo.LevelThree";
+    private static final String NEXT_LEVEL = "com.example.demo.level.LevelThree";
     private static final int TOTAL_ENEMIES = 7; // Adjust difficulty
     private static final int KILLS_TO_ADVANCE = 15; // Higher kill requirement
     private static final double ENEMY_SPAWN_PROBABILITY = 0.25; // More frequent spawns
