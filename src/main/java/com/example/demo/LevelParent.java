@@ -10,6 +10,9 @@ import javafx.scene.Scene;
 import javafx.scene.image.*;
 import javafx.scene.input.*;
 import javafx.util.Duration;
+import javafx.animation.PauseTransition;
+import javafx.scene.control.Label;
+import javafx.stage.Stage;
 import javafx.geometry.Bounds;
 import com.example.demo.utilities.CollisionUtils;
 
@@ -230,12 +233,48 @@ public abstract class LevelParent extends Observable {
 	protected void winGame() {
 		timeline.stop();
 		levelView.showWinImage();
+		returnToMainMenuAfter(2.5); // show win image for ~2.5s
 	}
 
 	protected void loseGame() {
 		timeline.stop();
 		levelView.showGameOverImage();
+		returnToMainMenuAfter(2.5); // show game over for ~2.5s
 	}
+
+	private void returnToMainMenuAfter(double seconds) {
+		// 1) Add a countdown label to the center of the screen
+		int total = (int)Math.ceil(seconds);
+		Label countdown = new Label("Returning to menu in " + total + "…");
+		countdown.setStyle("-fx-font-size: 28px; -fx-text-fill: white; -fx-font-weight: bold; "
+				+ "-fx-effect: dropshadow(gaussian, black, 8, 0.4, 0, 0);");
+		// Center-ish using your known screenWidth/screenHeight
+		countdown.setLayoutX((screenWidth  / 2) - 180);
+		countdown.setLayoutY((screenHeight / 2) - 20);
+		root.getChildren().add(countdown);
+
+		// 2) Update that label every second
+		final int[] remaining = { total };
+		Timeline tick = new Timeline(new KeyFrame(Duration.seconds(1), e -> {
+			remaining[0]--;
+			if (remaining[0] >= 0) {
+				countdown.setText("Returning to menu in " + remaining[0] + "…");
+			}
+		}));
+		tick.setCycleCount(total);
+		tick.play();
+
+		// 3) After the pause, remove label and go to Main Menu
+		PauseTransition wait = new PauseTransition(Duration.seconds(seconds));
+		wait.setOnFinished(e -> {
+			root.getChildren().remove(countdown);
+			Stage stage = (Stage) root.getScene().getWindow();
+			MainMenu menu = new MainMenu(stage);
+			stage.setScene(menu.getScene());
+		});
+		wait.play();
+	}
+
 
 	protected UserPlane getUser() {
 		return user;
