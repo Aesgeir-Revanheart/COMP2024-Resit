@@ -32,7 +32,7 @@ import javafx.scene.Node;
 public abstract class LevelParent extends Observable {
 
 	private static final double PLAYER_SHRINK     = 0.40; // more forgiving for the player
-	private static final double ENEMY_SHRINK      = 0.33; // fair for enemies
+	private static final double ENEMY_SHRINK      = 0.32; // fair for enemies
 	private static final double PROJECTILE_SHRINK = 0.15; // tiny trim for bullets
 
 	private static final double SCREEN_HEIGHT_ADJUSTMENT = 150;
