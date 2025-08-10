@@ -20,11 +20,19 @@ import javafx.scene.control.Label;
 import javafx.stage.Stage;
 import javafx.geometry.Bounds;
 import com.example.demo.utilities.CollisionUtils;
+import javafx.scene.paint.Color;
+import javafx.scene.shape.Rectangle;
+import javafx.scene.control.Button;
+import javafx.geometry.Pos;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
+import javafx.scene.Node;
+
 
 public abstract class LevelParent extends Observable {
 
 	private static final double PLAYER_SHRINK     = 0.40; // more forgiving for the player
-	private static final double ENEMY_SHRINK      = 0.30; // fair for enemies
+	private static final double ENEMY_SHRINK      = 0.33; // fair for enemies
 	private static final double PROJECTILE_SHRINK = 0.15; // tiny trim for bullets
 
 	private static final double SCREEN_HEIGHT_ADJUSTMENT = 150;
@@ -38,6 +46,12 @@ public abstract class LevelParent extends Observable {
 	private final UserPlane user;
 	private final Scene scene;
 	private final ImageView background;
+	private boolean paused = false;
+	private StackPane pauseOverlay;
+	private int pauseFocusIndex = 0;
+	private java.util.List<Button> pauseButtons;
+
+
 
 	private final List<ActiveActorDestructible> friendlyUnits;
 	private final List<ActiveActorDestructible> enemyUnits;
@@ -124,6 +138,12 @@ public abstract class LevelParent extends Observable {
 		background.setOnKeyPressed(new EventHandler<KeyEvent>() {
 			public void handle(KeyEvent e) {
 				KeyCode kc = e.getCode();
+				if (kc == KeyCode.ESCAPE) {
+					togglePause();
+					e.consume();
+					return;
+				}
+
 				if (kc == KeyCode.UP) user.moveUp();
 				if (kc == KeyCode.DOWN) user.moveDown();
 				if (kc == KeyCode.SPACE) fireProjectile();
@@ -313,5 +333,132 @@ public abstract class LevelParent extends Observable {
 	private void updateNumberOfEnemies() {
 		currentNumberOfEnemies = enemyUnits.size();
 	}
+
+	// ===== Pause Menu Support =====
+	private void togglePause() {
+		if (paused) resumeGame();
+		else pauseGame();
+	}
+
+	private void pauseGame() {
+		if (paused) return;
+		paused = true;
+		timeline.pause();
+		showPauseOverlay();
+	}
+
+	private void resumeGame() {
+		if (!paused) return;
+		paused = false;
+		hidePauseOverlay();
+		background.requestFocus();
+		timeline.play();
+	}
+
+	private void focusPauseButton(int idx) {
+		if (pauseButtons == null || pauseButtons.isEmpty()) return;
+		int n = pauseButtons.size();
+		pauseFocusIndex = (idx % n + n) % n; // wrap
+		pauseButtons.get(pauseFocusIndex).requestFocus();
+	}
+
+
+	private void showPauseOverlay() {
+		if (pauseOverlay == null) {
+			pauseOverlay = new StackPane();
+			pauseOverlay.setFocusTraversable(true);
+			pauseOverlay.setPrefSize(screenWidth, screenHeight);
+
+			Rectangle dim = new Rectangle(screenWidth, screenHeight);
+			dim.setFill(Color.color(0, 0, 0, 0.65));
+
+			VBox box = new VBox(16);
+			box.setAlignment(Pos.CENTER);
+
+			Button resumeBtn = new Button("Resume");
+			resumeBtn.setOnAction(e -> resumeGame());
+
+			Button restartBtn = new Button("Restart Level");
+			restartBtn.setOnAction(e -> {
+				resumeGame();
+				goToNextLevel(getClass().getName());
+			});
+
+			Button mainMenuBtn = new Button("Main Menu");
+			mainMenuBtn.setOnAction(e -> {
+				resumeGame();
+				Stage stage = (Stage) root.getScene().getWindow();
+				MainMenu menu = new MainMenu(stage);
+				stage.setScene(menu.getScene());
+			});
+
+			Button quitBtn = new Button("Quit");
+			quitBtn.setOnAction(e -> {
+				Stage stage = (Stage) root.getScene().getWindow();
+				stage.close();
+			});
+
+			// Hover -> focus (so ENTER fires the hovered one)
+			resumeBtn.setOnMouseEntered(e -> { pauseFocusIndex = 0; resumeBtn.requestFocus(); });
+			restartBtn.setOnMouseEntered(e -> { pauseFocusIndex = 1; restartBtn.requestFocus(); });
+			mainMenuBtn.setOnMouseEntered(e -> { pauseFocusIndex = 2; mainMenuBtn.requestFocus(); });
+			quitBtn.setOnMouseEntered(e -> { pauseFocusIndex = 3; quitBtn.requestFocus(); });
+
+			box.getChildren().addAll(resumeBtn, restartBtn, mainMenuBtn, quitBtn);
+			pauseOverlay.getChildren().addAll(dim, box);
+
+			// Keep list so we can move with arrow keys
+			pauseButtons = java.util.Arrays.asList(resumeBtn, restartBtn, mainMenuBtn, quitBtn);
+
+			// Key handling: ESC resumes; arrows move; ENTER activates; SPACE disabled
+			pauseOverlay.setOnKeyPressed(e -> {
+				switch (e.getCode()) {
+					case ESCAPE:
+						resumeGame();
+						e.consume();
+						break;
+					case DOWN: case RIGHT:
+						focusPauseButton(pauseFocusIndex + 1);
+						e.consume();
+						break;
+					case UP: case LEFT:
+						focusPauseButton(pauseFocusIndex - 1);
+						e.consume();
+						break;
+					case ENTER:
+						Node focused = pauseOverlay.getScene().getFocusOwner();
+						if (focused instanceof Button) {
+							((Button) focused).fire();
+							e.consume();
+						}
+						break;
+					case SPACE:
+						// explicitly do nothing so spacebar doesn't trigger buttons
+						e.consume();
+						break;
+					default:
+						// ignore other keys
+				}
+			});
+
+			// First open: start focused on "Resume"
+			focusPauseButton(0);
+		}
+
+		if (!root.getChildren().contains(pauseOverlay)) {
+			root.getChildren().add(pauseOverlay);
+		}
+
+		// Re-open: restore focus to the last selected item
+		focusPauseButton(pauseFocusIndex);
+	}
+
+
+	private void hidePauseOverlay() {
+		if (pauseOverlay != null) {
+			root.getChildren().remove(pauseOverlay);
+		}
+	}
+
 
 }
