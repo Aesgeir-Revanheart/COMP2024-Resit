@@ -1,19 +1,21 @@
-package com.example.demo;
+package com.example.demo.level;
 
-public class LevelTwo extends LevelParent {
+import com.example.demo.model.ActiveActorDestructible;
+import com.example.demo.model.EnemyPlane;
+
+public class LevelThree extends LevelParent {
 
     // Constants for LevelTwo
-    private static final String BACKGROUND_IMAGE_NAME = "/com/example/demo/images/background2.jpg";
-    private static final String NEXT_LEVEL = "com.example.demo.LevelThree";
-    private static final int TOTAL_ENEMIES = 7; // Adjust difficulty
-    private static final int KILLS_TO_ADVANCE = 15; // Higher kill requirement
-    private static final double ENEMY_SPAWN_PROBABILITY = 0.25; // More frequent spawns
-    private static final int PLAYER_INITIAL_HEALTH = 4; // Reduced player health for Medium difficulty
+    private static final String BACKGROUND_IMAGE_NAME = "/com/example/demo/images/background3.jpg";
+    private static final String NEXT_LEVEL = "com.example.demo.level.BossLevel";
+    private static final int TOTAL_ENEMIES = 10; // Adjust difficulty
+    private static final int KILLS_TO_ADVANCE = 20; // Higher kill requirement
+    private static final double ENEMY_SPAWN_PROBABILITY = 0.30; // More frequent spawns
+    private static final int PLAYER_INITIAL_HEALTH = 3; // Reduced player health for Hard difficulty
 
     // Constructor matching LevelParent's requirements
-    public LevelTwo(double screenHeight, double screenWidth) {
+    public LevelThree(double screenHeight, double screenWidth) {
         super(BACKGROUND_IMAGE_NAME, screenHeight, screenWidth, PLAYER_INITIAL_HEALTH);
-
     }
 
     // Override methods to customize LevelTwo behavior
