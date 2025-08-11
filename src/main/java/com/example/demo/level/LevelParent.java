@@ -29,6 +29,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.Node;
 
 
+
 public abstract class LevelParent extends Observable {
 
 	private static final double PLAYER_SHRINK     = 0.40; // more forgiving for the player
@@ -51,6 +52,12 @@ public abstract class LevelParent extends Observable {
 	private int pauseFocusIndex = 0;
 	private java.util.List<Button> pauseButtons;
 
+	//EMP: config & state
+	private static final javafx.util.Duration EMP_SUPPRESS = javafx.util.Duration.millis(1250); // 1.25s
+	private boolean empAvailable = true;
+	private long enemyFireSuppressedUntilNanos = 0L;
+	private ImageView empIcon;                 // HUD icon
+	private final int playerInitialHearts;     // for icon placement
 
 
 	private final List<ActiveActorDestructible> friendlyUnits;
@@ -62,6 +69,7 @@ public abstract class LevelParent extends Observable {
 	private LevelView levelView;
 
 	public LevelParent(String backgroundImageName, double screenHeight, double screenWidth, int playerInitialHealth) {
+		this.playerInitialHearts = playerInitialHealth;
 		this.root = new Group();
 		this.scene = new Scene(root, screenWidth, screenHeight);
 		this.timeline = new Timeline();
@@ -93,6 +101,7 @@ public abstract class LevelParent extends Observable {
 		initializeBackground();
 		initializeFriendlyUnits();
 		levelView.showHeartDisplay();
+		showEmpIcon();
 		return scene;
 	}
 
@@ -143,6 +152,11 @@ public abstract class LevelParent extends Observable {
 					e.consume();
 					return;
 				}
+				if (kc == KeyCode.G) {
+					tryTriggerEMP();
+					e.consume();
+					return;
+				}
 
 				if (kc == KeyCode.UP) user.moveUp();
 				if (kc == KeyCode.DOWN) user.moveDown();
@@ -165,6 +179,7 @@ public abstract class LevelParent extends Observable {
 	}
 
 	private void generateEnemyFire() {
+		if (isEnemyFireSuppressed()) return;
 		enemyUnits.forEach(enemy -> spawnEnemyProjectile(((FighterPlane) enemy).fireProjectile()));
 	}
 
@@ -174,6 +189,96 @@ public abstract class LevelParent extends Observable {
 			enemyProjectiles.add(projectile);
 		}
 	}
+
+	private boolean isEnemyFireSuppressed() {
+		return System.nanoTime() < enemyFireSuppressedUntilNanos;
+	}
+
+	private void tryTriggerEMP() {
+		if (!empAvailable) return;
+		if (paused) return;
+
+		playEmpBoom();
+
+		empAvailable = false;
+		setEmpIconVisible(false);
+
+		clearEnemyProjectilesNow(); // remove all enemy bullets this frame
+		enemyFireSuppressedUntilNanos = System.nanoTime() + (long) (EMP_SUPPRESS.toMillis() * 1_000_000L);
+	}
+
+	private void clearEnemyProjectilesNow() {
+		if (enemyProjectiles.isEmpty()) return;
+		List<ActiveActorDestructible> toRemove = new ArrayList<>(enemyProjectiles);
+		for (ActiveActorDestructible p : toRemove) {
+			p.destroy();
+		}
+		// Clear immediately so the screen shows empty this frame
+		removeAllDestroyedActors();
+	}
+
+	private void showEmpIcon() {
+		// Place to the right of hearts
+		double x = 5 + (playerInitialHearts * 55);
+		double y = 25;
+
+		Image img = new Image(getClass().getResource("/com/example/demo/images/emp.png").toExternalForm());
+		empIcon = new ImageView(img);
+		empIcon.setFitHeight(40);
+		empIcon.setPreserveRatio(true);
+		empIcon.setLayoutX(x);
+		empIcon.setLayoutY(y);
+		empIcon.setVisible(empAvailable);
+		root.getChildren().add(empIcon);
+	}
+
+	// Big central boom (fireball + shockwave), ~280ms
+	private void playEmpBoom() {
+		double cx = screenWidth / 2.0;
+		double cy = screenHeight / 2.0;
+
+		// Core glow (radial gradient)
+		javafx.scene.paint.RadialGradient fire =
+				new javafx.scene.paint.RadialGradient(
+						0, 0, cx, cy, 60, false, javafx.scene.paint.CycleMethod.NO_CYCLE,
+						new javafx.scene.paint.Stop(0.0, javafx.scene.paint.Color.web("#FFF7D6")),
+						new javafx.scene.paint.Stop(0.4, javafx.scene.paint.Color.web("#FFC04D")),
+						new javafx.scene.paint.Stop(1.0, javafx.scene.paint.Color.color(1, 0.4, 0, 0.0))
+				);
+
+		javafx.scene.shape.Circle core = new javafx.scene.shape.Circle(cx, cy, 30);
+		core.setFill(fire);
+
+		// Shockwave ring
+		javafx.scene.shape.Circle ring = new javafx.scene.shape.Circle(cx, cy, 36);
+		ring.setFill(javafx.scene.paint.Color.TRANSPARENT);
+		ring.setStroke(javafx.scene.paint.Color.WHITE);
+		ring.setStrokeWidth(3);
+
+		javafx.scene.Group boom = new javafx.scene.Group(core, ring);
+		boom.setOpacity(0.95);
+		root.getChildren().add(boom);
+
+		javafx.animation.ScaleTransition st =
+				new javafx.animation.ScaleTransition(javafx.util.Duration.millis(280), boom);
+		st.setFromX(0.9); st.setFromY(0.9);
+		st.setToX(5.0);   st.setToY(5.0);
+
+		javafx.animation.FadeTransition ft =
+				new javafx.animation.FadeTransition(javafx.util.Duration.millis(280), boom);
+		ft.setFromValue(1.0);
+		ft.setToValue(0.0);
+
+		javafx.animation.ParallelTransition pt = new javafx.animation.ParallelTransition(st, ft);
+		pt.setOnFinished(e -> root.getChildren().remove(boom));
+		pt.play();
+	}
+
+
+	private void setEmpIconVisible(boolean visible) {
+		if (empIcon != null) empIcon.setVisible(visible);
+	}
+
 
 	private void updateActors() {
 		friendlyUnits.forEach(plane -> plane.updateActor());
@@ -334,7 +439,7 @@ public abstract class LevelParent extends Observable {
 		currentNumberOfEnemies = enemyUnits.size();
 	}
 
-	// ===== Pause Menu Support =====
+	// Pause Menu Support
 	private void togglePause() {
 		if (paused) resumeGame();
 		else pauseGame();
@@ -398,7 +503,7 @@ public abstract class LevelParent extends Observable {
 				stage.close();
 			});
 
-			// Hover -> focus (so ENTER fires the hovered one)
+			// Hover -> focus (so ENTER passes the hovered function)
 			resumeBtn.setOnMouseEntered(e -> { pauseFocusIndex = 0; resumeBtn.requestFocus(); });
 			restartBtn.setOnMouseEntered(e -> { pauseFocusIndex = 1; restartBtn.requestFocus(); });
 			mainMenuBtn.setOnMouseEntered(e -> { pauseFocusIndex = 2; mainMenuBtn.requestFocus(); });
@@ -407,10 +512,9 @@ public abstract class LevelParent extends Observable {
 			box.getChildren().addAll(resumeBtn, restartBtn, mainMenuBtn, quitBtn);
 			pauseOverlay.getChildren().addAll(dim, box);
 
-			// Keep list so we can move with arrow keys
 			pauseButtons = java.util.Arrays.asList(resumeBtn, restartBtn, mainMenuBtn, quitBtn);
 
-			// Key handling: ESC resumes; arrows move; ENTER activates; SPACE disabled
+			// Key handling: ESC resumes; arrows move; ENTER activates
 			pauseOverlay.setOnKeyPressed(e -> {
 				switch (e.getCode()) {
 					case ESCAPE:
@@ -433,7 +537,7 @@ public abstract class LevelParent extends Observable {
 						}
 						break;
 					case SPACE:
-						// explicitly do nothing so spacebar doesn't trigger buttons
+						// does nothing so space bar doesn't trigger buttons
 						e.consume();
 						break;
 					default:
