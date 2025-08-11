@@ -1,0 +1,72 @@
+@startuml
+skinparam classAttributeIconSize 0
+package "com.example.demo" {
+class MainMenuTest
+}
+package "com.example.demo.controller" {
+class Controller
+class Main
+}
+package "com.example.demo.level" {
+class BossLevel
+class BossLevelView
+class LevelOne
+class LevelParent
+class LevelThree
+class LevelTwo
+class LevelView
+}
+package "com.example.demo.model" {
+class ActiveActor
+class ActiveActorDestructible
+class Boss
+class BossProjectile
+class Destructible <<interface>>
+class EnemyPlane
+class EnemyProjectile
+class FighterPlane
+class Projectile
+class UserPlane
+class UserProjectile
+}
+package "com.example.demo.utilities" {
+class CollisionUtils
+class CollisionUtilsContactTest
+class CollisionUtilsEdgeCasesTest
+class CollisionUtilsTest
+}
+package "com.example.demo.view" {
+class GameOverImage
+class HeartDisplay
+class LevelSelection
+class MainMenu
+class ShieldImage
+class WinImage
+}
+LevelParent <|-- BossLevel
+BossLevel o-- "1" Boss
+BossLevel o-- "1" BossLevelView
+LevelView <|-- BossLevelView
+BossLevelView o-- "1" ShieldImage
+LevelParent <|-- LevelOne
+LevelParent o-- "1" UserPlane
+LevelParent o-- "*" ActiveActorDestructible
+LevelParent o-- "*" ActiveActorDestructible
+LevelParent o-- "*" ActiveActorDestructible
+LevelParent o-- "*" ActiveActorDestructible
+LevelParent o-- "1" LevelView
+LevelParent <|-- LevelThree
+LevelParent <|-- LevelTwo
+LevelView o-- "1" WinImage
+LevelView o-- "1" GameOverImage
+LevelView o-- "1" HeartDisplay
+FighterPlane <|-- Boss
+Projectile <|-- BossProjectile
+FighterPlane <|-- EnemyPlane
+Projectile <|-- EnemyProjectile
+ActiveActorDestructible <|-- FighterPlane
+ActiveActorDestructible <|-- Projectile
+FighterPlane <|-- UserPlane
+Projectile <|-- UserProjectile
+MainMenuTest o-- "1" MainMenu
+@enduml
